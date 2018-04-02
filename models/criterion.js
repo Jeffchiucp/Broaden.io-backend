@@ -5,7 +5,6 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       type: DataTypes.STRING,
       validate: {
-        isAlphanumeric: true
       }
     },
     level: {
@@ -16,6 +15,10 @@ module.exports = (sequelize, DataTypes) => {
         max: 4,
         isInt: true
       }
+    },
+    answer: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false
     }
   }, {
     classMethods: {
