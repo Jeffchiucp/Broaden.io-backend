@@ -41,3 +41,7 @@ This project is licensed under the MIT License - see the [LICENSE.](https://tldr
 -------------------
 
 ![screen shot 2018-03-01 at 2 20 24 pm](https://user-images.githubusercontent.com/10523517/36866100-3700dba4-1d46-11e8-8192-bd77ec02bdf0.png)
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2FJeffchiucp%2FBroaden.io-backend.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2FJeffchiucp%2FBroaden.io-backend?ref=badge_shield)
+
+
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2FJeffchiucp%2FBroaden.io-backend.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2FJeffchiucp%2FBroaden.io-backend?ref=badge_large)
