@@ -1,5 +1,6 @@
-const db = require('../models');
+const db = require('../models')
 var Assessment = db.Assessment
+var ogs = require('open-graph-scraper')
 
 module.exports = (app) => {
 
@@ -16,10 +17,6 @@ module.exports = (app) => {
           model: db.Scale,
           include: [{
             model: db.Criterion,
-            include: [{
-              model: db.Action,
-            }],
-            order: [ [ { model: db.Action }, 'id', 'ASC' ] ]
           }],
           order: [ [ { model: db.Criterion }, 'id', 'ASC' ] ]
         }],
@@ -53,28 +50,6 @@ module.exports = (app) => {
         error: err
       })
     })
-
-    // db.Assessment.findOrCreate({ where: params, defaults: req.body })
-    // .all().then((assessment, created) => {
-    //   callback && callback(null, assessment, created);
-    // },
-    // (error) => {
-    //   callback && callback(error);
-    // });
-    //
-    // const callback = (error, result, created) => {
-    //   if (error) {
-    //     console.log("Error in Assessment Create Route:", error);
-    //     res.send(400, { message: "Error!", error })
-    //   } else {
-    //     console.log("New Assessment Created? ", created)
-    //     res.send({
-    //       message: (created ? "Assessment was successfully created" : "Assessment was successfully found"),
-    //       created,
-    //       result
-    //     })
-    //   }
-    // };
   });
 
 
@@ -111,9 +86,27 @@ module.exports = (app) => {
   // Index Assessments
   app.get('/users/:userId/assessments', (req, res) => {
     const userId = req.params.userId
+    var allAssessments = []
+    var allLearningActions = []
+    var ogPromises = []
+
+    const callOpenGraph = (url) => {
+      return new Promise((resolve) => {
+        var options = {'url': url}
+        ogs(options, (error, results) => {
+          if (error) {
+            console.log('Open Graph Error:', results.error) // This is returns true or false. True if there was a error. The error it self is inside the results object.
+            return resolve(results)
+          } else {
+            console.log('Open Graph Call Successful...')
+            return resolve(results)
+          }
+        })
+      })
+    }
+
     db.Assessment.findAll({ where: { userId: userId } })
     .then((assessments) => {
-      console.log("Response from Assessment/Index: ", assessments)
       if (assessments === null) {
         res.status(400);
         res.json({
@@ -121,16 +114,72 @@ module.exports = (app) => {
           userId
         })
       } else {
-        res.status(200)
-        res.json({
-          message: "Assessments request successful",
-          userId,
-          assessments
+        // console.dir("Storing the assessments:", assessments)
+        allAssessments = assessments
+        const criterionIds = []
+        assessments.forEach((assessment) => {
+          assessment.rubricJSON.Competencies.forEach((competency) => {
+            competency.Scales.forEach((scale) => {
+              scale.Criteria.forEach((criterion) => {
+                criterionIds.push(criterion.id)
+              })
+            })
+          })
+        })
+        return db.Action.findAll({
+          where: {
+            criterionId: criterionIds
+          },
+          include: [{
+            model: db.User,
+            as: 'User'
+          }]
         })
       }
     })
+    // .then((learningActions) => {
+    //   return Promise.all(learningActions.map((action) => {
+    //     return new Promise((resolve) => {
+    //       var options = {'url': action.url}
+    //       ogs(options, (error, results) => {
+    //         if (error) {
+    //           console.log('Open Graph Error:', results.error) // This is returns true or false. True if there was a error. The error it self is inside the results object.
+    //         } else {
+    //           console.log('Open Graph Call Successful...')
+    //         }
+    //         const newAction = { ...action.dataValues, meta: results.success ? results.data : { error: results } }
+    //         allLearningActions.push(newAction)
+    //         return resolve(action)
+    //       })
+    //     })
+    //   }))
+    // })
+    .then((learningActions) => {
+      console.log('Learning Actions:', allLearningActions.length)
+      allAssessments.forEach((assessment) => {
+        assessment.rubricJSON.Competencies.forEach((competency) => {
+          competency.Scales.forEach((scale) => {
+            scale.Criteria.forEach((criterion) => {
+              criterion.Actions = learningActions.filter((action) => {
+                return action.dataValues.criterionId === criterion.id
+              }).map((action) => {
+                return action.dataValues
+              })
+            })
+          })
+        })
+      })
+      res.status(200)
+      // console.dir("Assessments found and Learning Actions Mapped")
+      // console.dir(allAssessments, {colors: true})
+      res.json({
+        message: "Assessments request successful",
+        userId,
+        assessments: allAssessments
+      })
+    })
     .catch((err) => {
-      console.log(err);
+      console.dir(err, {colors: true});
       res.status(400);
       res.json({
         message: "Error!",
@@ -148,10 +197,10 @@ module.exports = (app) => {
     db.Assessment.update(assessment, {
       where: { id: assessmentId }
     }).then((response) => {
-      console.log(response);
+      console.dir(response, {colors: true});
       return db.Assessment.findById(assessmentId);
     }).then((assessment) => {
-      console.log("Assesement Competencies (HTML): ", assessment.rubricJSON.Competencies[0].Scales[0].Criteria)
+      console.log("Assessment Competencies (HTML): ", assessment.rubricJSON.Competencies[0].Scales[0].Criteria)
       res.status(200)
       res.json({
         message: 'assessment updated successfully!',
